@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  etcd:
+    tty: true
+    volumes:
+      - ./etcd.conf.yml:/etc/etcd/etcd.conf.yml
+      - ./etcd-data:/var/lib/etcd
+      - ./certs:/certs
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    build: 
+      context: .
+      dockerfile: Dockerfile.dock
+volumes:
+  etcd-data:
+  certs:

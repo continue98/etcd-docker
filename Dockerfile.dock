@@ -1,0 +1,31 @@
+FROM debian:11-slim
+
+ENV PATH="${PATH}:/usr/bin/go/bin:/usr/bin/etcd"
+SHELL ["/bin/bash", "-c"]
+
+# install golang
+RUN apt update && \
+	yes | apt install git && \
+	yes | apt install bash && \
+	yes | apt install curl && \
+	export GO_LATEST_VERSION=$(curl https://go.dev/VERSION?m=text) && \
+	curl -O https://dl.google.com/go/$(echo $GO_LATEST_VERSION).linux-amd64.tar.gz && \
+	tar -xzvf $(echo $GO_LATEST_VERSION).linux-amd64.tar.gz -C /usr/bin && \
+	rm $(echo $GO_LATEST_VERSION).linux-amd64.tar.gz
+
+# Download etcd and build
+
+RUN export ETCD_LATEST_RELEASE=$(curl -s https://api.github.com/repos/etcd-io/etcd/releases/latest | awk '/tag_name/ {print $2}' | tr -d ',"') && \
+	curl -L https://github.com/etcd-io/etcd/archive/refs/tags/$(echo $ETCD_LATEST_RELEASE).tar.gz -o etcd-$(echo $ETCD_LATEST_RELEASE).tar.gz && \
+	tar -xzvf etcd-$(echo $ETCD_LATEST_RELEASE).tar.gz --one-top-level=etcd-$(echo $ETCD_LATEST_RELEASE) --strip-components 1 && \
+	rm etcd-$(echo $ETCD_LATEST_RELEASE).tar.gz && \
+	cd etcd-$(echo $ETCD_LATEST_RELEASE) && \
+	./build.sh && \
+	mkdir /usr/bin/etcd && \
+	cp -R ./bin/* /usr/bin/etcd && \
+	cd / && \
+	rm -rf etcd-$(echo $ETCD_LATEST_RELEASE)
+
+COPY ./certs /certs
+
+CMD [ "etcd", "--config-file=/etc/etcd/etcd.conf.yml" ]
